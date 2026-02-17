@@ -1,6 +1,7 @@
 {
   "rewrites": [
     { "source": "/", "destination": "/index.html" },
+    { "source": "/favicon.ico", "destination": "/public/Retro95-logo.png" },
     { "source": "/success", "destination": "/success/index.html" },
     { "source": "/cancel", "destination": "/cancel/index.html" }
   ]
