@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Retro95 Pro Success</title>
+  <style>
+    body { font-family: 'MS Sans Serif', Arial, sans-serif; background: #008080; margin: 0; }
+    .box { width: 360px; margin: 80px auto; background: #c0c0c0; border: 2px solid; border-color: #dfdfdf #808080 #808080 #dfdfdf; padding: 12px; }
+  </style>
+</head>
+<body>
+  <div class="box">Unlock complete. Returning to desktop...</div>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get('session_id');
+    const pendingRaw = localStorage.getItem('retro95_checkout_pending');
+    const pendingTime = pendingRaw ? Number(pendingRaw) : 0;
+    const pendingValid = Number.isFinite(pendingTime) && (Date.now() - pendingTime) < (45 * 60 * 1000);
+
+    const box = document.querySelector('.box');
+    if (sessionId && pendingValid) {
+      localStorage.setItem('retro95_pro', 'true');
+      localStorage.removeItem('retro95_checkout_pending');
+      box.textContent = 'Unlock complete. Returning to desktop...';
+      setTimeout(() => { window.location.href = './index.html'; }, 700);
+    } else {
+      localStorage.removeItem('retro95_checkout_pending');
+      box.innerHTML = 'Unable to verify checkout success.<br><br><a href=\"./index.html\">Return to Retro95</a>';
+    }
+  </script>
+</body>
+</html>
