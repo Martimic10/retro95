@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Windows 95</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="desktop" class="desktop" aria-label="Desktop"></div>
+    <div id="window-layer" class="window-layer" aria-live="polite"></div>
+
+    <div class="taskbar">
+        <button id="start-button" class="start-button" aria-haspopup="menu" aria-expanded="false">
+            <div class="start-icon"></div>
+            <span>Start</span>
+        </button>
+        <div class="taskbar-items" id="taskbar-items"></div>
+        <div class="system-tray">
+            <div class="clock" id="clock"></div>
+        </div>
+    </div>
+
+    <div id="start-menu" class="menu start-menu" role="menu" aria-hidden="true"></div>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>

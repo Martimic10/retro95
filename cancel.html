@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Retro95 Pro Checkout Canceled</title>
+  <style>
+    body { font-family: 'MS Sans Serif', Arial, sans-serif; background: #008080; margin: 0; }
+    .box { width: 420px; margin: 80px auto; background: #c0c0c0; border: 2px solid; border-color: #dfdfdf #808080 #808080 #dfdfdf; padding: 12px; }
+    a { color: #000080; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <div>Checkout canceled.</div>
+    <div style="margin-top:8px;"><a href="./index.html">Return to Retro95</a></div>
+  </div>
+  <script>
+    localStorage.removeItem('retro95_checkout_pending');
+  </script>
+</body>
+</html>
