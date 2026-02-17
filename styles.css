@@ -888,6 +888,17 @@ textarea {
     font-size: 12px;
 }
 
+.retro-touch-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.retro-touch-btn {
+    min-width: 64px;
+    padding: 3px 8px;
+}
+
 .game2048-wrap {
     flex: 1;
     display: flex;
@@ -1092,6 +1103,11 @@ textarea {
 
     .games-hub-list {
         grid-template-columns: repeat(2, 1fr);
+    }
+
+    .retro-game-canvas-wrap,
+    .game2048-wrap {
+        touch-action: none;
     }
 
     .btn,

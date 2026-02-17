@@ -9,6 +9,69 @@ function getGameWindowActive(container) {
     return Boolean(container.isConnected && windowEl && windowEl.style.display !== 'none');
 }
 
+function isTouchLike() {
+    return window.matchMedia('(pointer: coarse)').matches || window.matchMedia('(max-width: 900px)').matches;
+}
+
+function dispatchGameKey(game, key) {
+    game.onKeyDown({
+        key,
+        preventDefault() {}
+    });
+}
+
+function bindSwipe(element, onDirection) {
+    let startX = 0;
+    let startY = 0;
+    let active = false;
+
+    function onStart(event) {
+        const touch = event.touches[0];
+        if (!touch) return;
+        startX = touch.clientX;
+        startY = touch.clientY;
+        active = true;
+    }
+
+    function onEnd(event) {
+        if (!active) return;
+        const touch = event.changedTouches[0];
+        active = false;
+        if (!touch) return;
+
+        const dx = touch.clientX - startX;
+        const dy = touch.clientY - startY;
+        const absX = Math.abs(dx);
+        const absY = Math.abs(dy);
+        if (Math.max(absX, absY) < 20) return;
+
+        if (absX > absY) onDirection(dx > 0 ? 'right' : 'left');
+        else onDirection(dy > 0 ? 'down' : 'up');
+    }
+
+    element.addEventListener('touchstart', onStart, { passive: true });
+    element.addEventListener('touchend', onEnd, { passive: true });
+
+    return () => {
+        element.removeEventListener('touchstart', onStart);
+        element.removeEventListener('touchend', onEnd);
+    };
+}
+
+function createTouchButtons(buttons) {
+    const controls = document.createElement('div');
+    controls.className = 'retro-touch-controls';
+    buttons.forEach((button) => {
+        const el = document.createElement('button');
+        el.type = 'button';
+        el.className = 'btn retro-touch-btn';
+        el.textContent = button.label;
+        el.addEventListener('click', button.onPress);
+        controls.appendChild(el);
+    });
+    return controls;
+}
+
 function bindCanvasScaling(canvas, wrap, baseWidth, baseHeight) {
     function applyScale() {
         const styles = window.getComputedStyle(wrap);
@@ -206,6 +269,25 @@ const snakeApp = {
         }
 
         document.addEventListener('keydown', onKeyDown);
+        let unbindSwipe = null;
+        if (isTouchLike()) {
+            hint.textContent = 'Swipe or use buttons - Pause/Restart below';
+            const touchControls = createTouchButtons([
+                { label: 'Up', onPress: () => dispatchGameKey(game, 'ArrowUp') },
+                { label: 'Left', onPress: () => dispatchGameKey(game, 'ArrowLeft') },
+                { label: 'Right', onPress: () => dispatchGameKey(game, 'ArrowRight') },
+                { label: 'Down', onPress: () => dispatchGameKey(game, 'ArrowDown') },
+                { label: 'Pause', onPress: () => dispatchGameKey(game, ' ') },
+                { label: 'Restart', onPress: () => dispatchGameKey(game, 'Enter') }
+            ]);
+            root.insertBefore(touchControls, hint);
+            unbindSwipe = bindSwipe(canvasWrap, (direction) => {
+                if (direction === 'up') dispatchGameKey(game, 'ArrowUp');
+                if (direction === 'down') dispatchGameKey(game, 'ArrowDown');
+                if (direction === 'left') dispatchGameKey(game, 'ArrowLeft');
+                if (direction === 'right') dispatchGameKey(game, 'ArrowRight');
+            });
+        }
         const stopCanvasScaling = bindCanvasScaling(canvas, canvasWrap, 320, 320);
         const activityTimer = window.setInterval(() => {
             if (!root.isConnected) return;
@@ -216,6 +298,7 @@ const snakeApp = {
         const cleanupObserver = new MutationObserver(() => {
             if (!root.isConnected) {
                 document.removeEventListener('keydown', onKeyDown);
+                if (unbindSwipe) unbindSwipe();
                 stopCanvasScaling();
                 window.clearInterval(activityTimer);
                 game.destroy();
@@ -286,9 +369,29 @@ const pongApp = {
             }
         }
 
+        function onTouchMove(event) {
+            const touch = event.touches[0];
+            if (!touch) return;
+            event.preventDefault();
+            game.onMouseMove({
+                clientY: touch.clientY
+            });
+        }
+
         document.addEventListener('keydown', onKeyDown);
         document.addEventListener('keyup', onKeyUp);
         canvas.addEventListener('mousemove', onMouseMove);
+        canvas.addEventListener('touchstart', onTouchMove, { passive: false });
+        canvas.addEventListener('touchmove', onTouchMove, { passive: false });
+        if (isTouchLike()) {
+            hint.textContent = 'Slide finger on game area or use Up/Down buttons';
+            const touchControls = createTouchButtons([
+                { label: 'Up', onPress: () => dispatchGameKey(game, 'ArrowUp') },
+                { label: 'Down', onPress: () => dispatchGameKey(game, 'ArrowDown') },
+                { label: 'Restart', onPress: () => dispatchGameKey(game, 'Enter') }
+            ]);
+            root.insertBefore(touchControls, hint);
+        }
         const stopCanvasScaling = bindCanvasScaling(canvas, canvasWrap, 520, 300);
         const activityTimer = window.setInterval(() => {
             if (!root.isConnected) return;
@@ -301,6 +404,8 @@ const pongApp = {
                 document.removeEventListener('keydown', onKeyDown);
                 document.removeEventListener('keyup', onKeyUp);
                 canvas.removeEventListener('mousemove', onMouseMove);
+                canvas.removeEventListener('touchstart', onTouchMove);
+                canvas.removeEventListener('touchmove', onTouchMove);
                 stopCanvasScaling();
                 window.clearInterval(activityTimer);
                 game.destroy();
@@ -362,6 +467,25 @@ const tetrisApp = {
         }
 
         document.addEventListener('keydown', onKeyDown);
+        let unbindSwipe = null;
+        if (isTouchLike()) {
+            hint.textContent = 'Swipe for moves, tap Rotate/Drop buttons';
+            const touchControls = createTouchButtons([
+                { label: 'Left', onPress: () => dispatchGameKey(game, 'ArrowLeft') },
+                { label: 'Rotate', onPress: () => dispatchGameKey(game, 'ArrowUp') },
+                { label: 'Right', onPress: () => dispatchGameKey(game, 'ArrowRight') },
+                { label: 'Down', onPress: () => dispatchGameKey(game, 'ArrowDown') },
+                { label: 'Drop', onPress: () => dispatchGameKey(game, ' ') },
+                { label: 'Pause', onPress: () => dispatchGameKey(game, 'p') }
+            ]);
+            root.insertBefore(touchControls, hint);
+            unbindSwipe = bindSwipe(canvasWrap, (direction) => {
+                if (direction === 'up') dispatchGameKey(game, 'ArrowUp');
+                if (direction === 'down') dispatchGameKey(game, 'ArrowDown');
+                if (direction === 'left') dispatchGameKey(game, 'ArrowLeft');
+                if (direction === 'right') dispatchGameKey(game, 'ArrowRight');
+            });
+        }
         const stopCanvasScaling = bindCanvasScaling(canvas, canvasWrap, 200, 400);
         const activityTimer = window.setInterval(() => {
             if (!root.isConnected) return;
@@ -372,6 +496,7 @@ const tetrisApp = {
         const cleanupObserver = new MutationObserver(() => {
             if (!root.isConnected) {
                 document.removeEventListener('keydown', onKeyDown);
+                if (unbindSwipe) unbindSwipe();
                 stopCanvasScaling();
                 window.clearInterval(activityTimer);
                 game.destroy();
@@ -461,10 +586,28 @@ const game2048App = {
 
         document.addEventListener('keydown', onKeyDown);
         newBtn.addEventListener('click', () => game.reset());
+        let unbindSwipe = null;
+        if (isTouchLike()) {
+            hint.textContent = 'Swipe on board or use arrows below';
+            const touchControls = createTouchButtons([
+                { label: 'Up', onPress: () => dispatchGameKey(game, 'ArrowUp') },
+                { label: 'Left', onPress: () => dispatchGameKey(game, 'ArrowLeft') },
+                { label: 'Right', onPress: () => dispatchGameKey(game, 'ArrowRight') },
+                { label: 'Down', onPress: () => dispatchGameKey(game, 'ArrowDown') }
+            ]);
+            root.insertBefore(touchControls, hint);
+            unbindSwipe = bindSwipe(boardWrap, (direction) => {
+                if (direction === 'up') dispatchGameKey(game, 'ArrowUp');
+                if (direction === 'down') dispatchGameKey(game, 'ArrowDown');
+                if (direction === 'left') dispatchGameKey(game, 'ArrowLeft');
+                if (direction === 'right') dispatchGameKey(game, 'ArrowRight');
+            });
+        }
 
         const cleanupObserver = new MutationObserver(() => {
             if (!root.isConnected) {
                 document.removeEventListener('keydown', onKeyDown);
+                if (unbindSwipe) unbindSwipe();
                 cleanupObserver.disconnect();
             }
         });
