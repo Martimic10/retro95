@@ -28,8 +28,15 @@ async function createCheckoutSession() {
         body: JSON.stringify({ plan: 'retro95_pro' })
     });
     if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || 'Unable to start checkout');
+        let message = 'Unable to start checkout';
+        try {
+            const data = await res.json();
+            message = data?.error || JSON.stringify(data);
+        } catch (_error) {
+            const text = await res.text();
+            if (text) message = text;
+        }
+        throw new Error(`Checkout API error (${res.status}): ${message}`);
     }
     const data = await res.json();
     if (!data.url) throw new Error('Missing checkout URL');
@@ -70,24 +77,30 @@ export function showUpgradeModal(options = {}) {
     const unlockBtn = document.createElement('button');
     unlockBtn.className = 'btn';
     unlockBtn.textContent = 'Unlock Pro - $6.99';
+    let errorEl = null;
     unlockBtn.addEventListener('click', async () => {
         unlockBtn.disabled = true;
         unlockBtn.textContent = 'Opening Checkout...';
+        if (errorEl) {
+            errorEl.remove();
+            errorEl = null;
+        }
         localStorage.setItem(CHECKOUT_PENDING_KEY, String(Date.now()));
         try {
             const checkoutUrl = await createCheckoutSession();
             window.location.href = checkoutUrl;
-        } catch (_error) {
+        } catch (error) {
             if (STRIPE_CHECKOUT_URL && STRIPE_CHECKOUT_URL !== 'PASTE_STRIPE_CHECKOUT_URL_HERE') {
                 window.location.href = STRIPE_CHECKOUT_URL;
                 return;
             }
             unlockBtn.disabled = false;
             unlockBtn.textContent = 'Unlock Pro - $6.99';
-            const err = document.createElement('div');
-            err.className = 'pro-upgrade-message';
-            err.textContent = 'Checkout unavailable. Try again shortly.';
-            body.prepend(err);
+            errorEl = document.createElement('div');
+            errorEl.className = 'pro-upgrade-message';
+            errorEl.textContent = String(error?.message || 'Checkout unavailable. Try again shortly.');
+            body.prepend(errorEl);
+            console.error('Retro95 checkout error:', error);
             localStorage.removeItem(CHECKOUT_PENDING_KEY);
         }
     });
