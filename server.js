@@ -25,7 +25,21 @@ const ROOT = process.cwd();
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
 const STRIPE_PRICE_ID = process.env.STRIPE_PRICE_ID || '';
-const APP_BASE_URL = process.env.APP_BASE_URL || `http://localhost:${PORT}`;
+const APP_BASE_URL_RAW = process.env.APP_BASE_URL || '';
+
+function getAppBaseUrl(req) {
+  const fallback = `http://localhost:${PORT}`;
+  const fromRequest = req
+    ? `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`
+    : fallback;
+  const raw = String(APP_BASE_URL_RAW || '').trim();
+  if (!raw) return fromRequest || fallback;
+  try {
+    return new URL(raw).origin;
+  } catch (_error) {
+    return fromRequest || fallback;
+  }
+}
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -69,7 +83,7 @@ async function readBody(req) {
   });
 }
 
-async function createStripeCheckoutSession() {
+async function createStripeCheckoutSession(req) {
   if (!STRIPE_SECRET_KEY) {
     throw new Error('Missing STRIPE_SECRET_KEY');
   }
@@ -78,9 +92,10 @@ async function createStripeCheckoutSession() {
   }
 
   const form = new URLSearchParams();
+  const appBaseUrl = getAppBaseUrl(req);
   form.set('mode', 'payment');
-  form.set('success_url', `${APP_BASE_URL}/success.html?session_id={CHECKOUT_SESSION_ID}`);
-  form.set('cancel_url', `${APP_BASE_URL}/cancel.html`);
+  form.set('success_url', `${appBaseUrl}/success?session_id={CHECKOUT_SESSION_ID}`);
+  form.set('cancel_url', `${appBaseUrl}/cancel`);
   form.set('line_items[0][price]', STRIPE_PRICE_ID);
   form.set('line_items[0][quantity]', '1');
   form.set('allow_promotion_codes', 'true');
@@ -114,7 +129,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && requestUrl.pathname === '/api/create-checkout-session') {
       await readBody(req);
       try {
-        const url = await createStripeCheckoutSession();
+        const url = await createStripeCheckoutSession(req);
         return sendJson(res, 200, { url });
       } catch (error) {
         return sendJson(res, 500, { error: String(error.message || error) });

@@ -7,7 +7,16 @@ module.exports = async function handler(req, res) {
   try {
     const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
     const STRIPE_PRICE_ID = process.env.STRIPE_PRICE_ID || '';
-    const APP_BASE_URL = process.env.APP_BASE_URL || `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}`;
+    const inferredBaseUrl = `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}`;
+    const configuredBaseRaw = (process.env.APP_BASE_URL || '').trim();
+    let APP_BASE_URL = inferredBaseUrl;
+    if (configuredBaseRaw) {
+      try {
+        APP_BASE_URL = new URL(configuredBaseRaw).origin;
+      } catch (_error) {
+        APP_BASE_URL = inferredBaseUrl;
+      }
+    }
 
     if (!STRIPE_SECRET_KEY) {
       res.status(500).json({ error: 'Missing STRIPE_SECRET_KEY' });
